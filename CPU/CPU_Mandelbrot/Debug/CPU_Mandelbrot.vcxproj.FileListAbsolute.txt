@@ -1,2 +1,0 @@
-D:\Projekty C++\projekt_aowpd\CPU\CPU_Mandelbrot\Debug\CPU_Mandelbrot.exe
-D:\Projekty C++\projekt_aowpd\CPU\CPU_Mandelbrot\Debug\CPU_Mandelbrot.pdb
