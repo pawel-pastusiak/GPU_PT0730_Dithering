@@ -14,11 +14,18 @@ int main()
 {
     float realPoint = 0.2;
     float imagPoint = 0.2;
-    int max = 100;
+    int max = 0;
+    float step = 0;
     int appro = 0;
+
+    cout << "Prosze podac dokladnosc liczby zmiennoprzecinkowej: ";
+    cin >> step;
+    cout << "\nProsze podac maksymalna liczbe powtorzen funkcji sprawdzajacej przynaleznosc punktu do zbioru: ";
+    cin >> max;
+
     pointApproximation(&realPoint, &imagPoint, &max, &appro);
-    cout << appro;
-    traverse(&realPoint, &imagPoint, new float(1.0), new float(1.0), new float(0.05), &max, &appro);
+    //cout << appro;
+    traverse(&realPoint, &imagPoint, new float(1.0), new float(1.0), &step, &max, &appro);
 
     return 0;
 }
@@ -56,7 +63,7 @@ void traverse(float* startX, float* startY, float* endX, float* endY, float* ste
         curY = *startY;
         while (curY < *endY) {
             pointApproximation(&curX, &curY, maxIter, approximation);
-            cout << endl << i++ << ": " << curX << " x " << curY << ": " << *approximation;
+            //cout << endl << i++ << ": " << curX << " x " << curY << ": " << *approximation;
             curY += *step;
         }
         curX += *step;
