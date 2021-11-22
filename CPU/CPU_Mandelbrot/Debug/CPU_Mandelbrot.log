@@ -1,4 +1,4 @@
 ﻿  CPU_Mandelbrot.cpp
-D:\Projekty C++\projekt_aowpd\CPU\CPU_Mandelbrot\CPU_Mandelbrot.cpp(12,26): warning C4305: 'initializing': truncation from 'double' to 'float'
-D:\Projekty C++\projekt_aowpd\CPU\CPU_Mandelbrot\CPU_Mandelbrot.cpp(13,26): warning C4305: 'initializing': truncation from 'double' to 'float'
+D:\Projekty C++\projekt_aowpd\CPU\CPU_Mandelbrot\CPU_Mandelbrot.cpp(14,26): warning C4305: 'initializing': truncation from 'double' to 'float'
+D:\Projekty C++\projekt_aowpd\CPU\CPU_Mandelbrot\CPU_Mandelbrot.cpp(15,26): warning C4305: 'initializing': truncation from 'double' to 'float'
   CPU_Mandelbrot.vcxproj -> D:\Projekty C++\projekt_aowpd\CPU\CPU_Mandelbrot\Debug\CPU_Mandelbrot.exe
