@@ -6,6 +6,7 @@
 using namespace std;
 
 void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* approximation);
+void traverse(float* startX, float* startY, float* endX, float* endY, float* step, int* maxIter, int* approximation);
 
 int main()
 {
@@ -28,6 +29,8 @@ int main()
 
     cout << "DEBUG:" << "\r\n";
     pointApproximation(&realPoint, &imagPoint, &max, &appro);
+    //cout << appro;
+    traverse(&realPoint, &imagPoint, new float(1.0), new float(1.0), &step, &max, &appro);
     cout << appro;
 
     return 0;
@@ -53,4 +56,20 @@ void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* app
     }
 
     *approximation = i;
+}
+
+void traverse(float* startX, float* startY, float* endX, float* endY, float* step, int* maxIter, int* approximation)
+{
+    int i = 0;
+    float curX, curY;
+    curX = *startX;
+    while (curX < *endX) {
+        curY = *startY;
+        while (curY < *endY) {
+            pointApproximation(&curX, &curY, maxIter, approximation);
+            //cout << endl << i++ << ": " << curX << " x " << curY << ": " << *approximation;
+            curY += *step;
+        }
+        curX += *step;
+    }
 }
