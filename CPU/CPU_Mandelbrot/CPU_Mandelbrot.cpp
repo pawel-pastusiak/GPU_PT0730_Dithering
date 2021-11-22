@@ -9,10 +9,24 @@ void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* app
 
 int main()
 {
+    cout << "Mandelbrot CPU" << "\r\n";
+
     float realPoint = 0.2;
     float imagPoint = 0.2;
+
     int max = 100;
+    float step = 0;
     int appro = 0;
+
+    cout << "Podaj maksymalna ilosc iteracji: ";
+    cin >> max;
+
+    cout << "Podaj dokladnosc liczby zmiennoprzecinkowej: ";
+    cin >> step;
+
+    cout << "TODO: podpiecie funkcji" << "\r\n";
+
+    cout << "DEBUG:" << "\r\n";
     pointApproximation(&realPoint, &imagPoint, &max, &appro);
     cout << appro;
 
