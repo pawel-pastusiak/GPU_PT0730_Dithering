@@ -10,6 +10,7 @@ using namespace std;
 void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* approximation);
 void traverse(float* startX, float* startY, float* endX, float* endY, float* step, int* maxIter, int* approximation);
 float** splitArea(int* threadCount);
+void print_in_human_readable_form(float** table, int x, int y, int n);
 
 int main()
 {
@@ -38,41 +39,52 @@ int main()
     int X = 1;
     float** table = splitArea(&threadCount);
     int count = int(table[0][0]);
+    //cout << count << " " << table[0][0] << "\r\n\r\n";
+    /*
+    for (int i = 0; i < count; i++)
+        for (int j = 0; j < ((i == count - 1) ? count - 1 : count); j++)
+            print_in_human_readable_form(table, i+1, j+1, i * count + j);
+   */
+    
+
     for (int i = 0; i < threadCount - 2; i++)
     {
-        cout << "{" << table[0][Y] << ", " << table[0][X++] << "}\t";
+        print_in_human_readable_form(table, X, Y, X + 1);
+        X++;
         if ((i + 1) % count == 0)
         {
             X = 1;
-            cout << "{" << table[0][Y] << ", " << table[0][count + 1] << "}";
-            cout << endl << endl;
+            
             Y++;
         }
     }
     if (table[1][0] < 0.5)
     {
-        cout << "{" << table[0][count] << ", " << table[0][count - 1] << "}\t{" << table[0][count] << ", " << table[0][count] << "}";
-        cout << "\t{" << table[0][count] << ", " << table[0][count + 1] << "}" << endl << endl;
+        print_in_human_readable_form(table, count - 1, count, count);
+        print_in_human_readable_form(table, count, count, count + 1);
 
     }
     else
     {
-        cout << "{" << table[0][Y] << ", " << table[0][X] << "}\t{" << table[0][Y] << ", ";
-        if (X++ < count)
-        {
-            if (Y == count) X = count - 1;
-            else X = count + 1;
-        }
-        cout << table[0][X] << "}" << endl << endl;
-        if (Y != count) X = 1;
-        cout << "{" << table[0][count] << ", " << table[0][X] << "}\t{" << table[0][count] << ", " << table[0][count + 1] << "}" << endl << endl;
+        int temp = 0;
+        if (X < count && Y == count) temp = count - 1;
+        else temp = count + 1;
+
+        print_in_human_readable_form(table, X, Y, temp);
+
+        if (Y != count) temp = 1;
+        
+        print_in_human_readable_form(table, temp, count, count + 1);
     }
 
     //pointApproximation(&realPoint, &imagPoint, &max, &appro);
     //cout << appro;
     //traverse(&realPoint, &imagPoint, new float(1.0), new float(1.0), &step, &max, &appro);
     //cout << appro;
-    cin >> max;
+    //cin >> max;
+    delete[] table[0];
+    delete table[1];
+    delete[] table;
     return 0;
 }
 
@@ -85,7 +97,7 @@ float** splitArea(int* threadCount)
     float areaSide = float(totalLength) / rowCount;
     float minPoint = float(-AREA_UNSINED_LIMIT);
     float** dims = new float*[2];
-    dims[0] = new float(rowCount + 2);
+    dims[0] = new float[rowCount + 2];
     dims[1] = new float;
     int inputIdx = 1;
 
@@ -104,6 +116,16 @@ float** splitArea(int* threadCount)
     dims[0][0] = rowCount;
 
     return dims;
+}
+
+void print_in_human_readable_form(float** table, int x, int y, int n)
+{
+    float startX = table[0][x];
+    float startY = table[0][y];
+    float endX = table[0][n];
+    float endY = table[0][y + 1];
+
+    cout << "[" << startY << ", " << startX << "] [" << endY << ", " << endX << "]" << "\r\n";
 }
 
 void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* approximation)
