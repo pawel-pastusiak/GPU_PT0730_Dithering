@@ -36,8 +36,6 @@ __device__ void pointApproximation(float* realPart, float* imagPart, int* maxIte
 
 __device__ void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
 {
-    printf("aaaaa");
-    *approximation = 2137;
     int i = 0;
     float curX, curY;
     curX = *startX;
@@ -45,7 +43,7 @@ __device__ void traverse(float* startX, float* startY, float endX, float endY, f
         int j = 0;
         curY = *startY;
         while (curY < endY) {
-            //pointApproximation(&curX, &curY, maxIter, approximation + (i * (int)(*width / *step + 0.5)) + j++);
+            pointApproximation(&curX, &curY, maxIter, approximation + (i * (int)(*width / *step + 0.5)) + j++);
             
             //cout << endl << i++ << ": " << curX << " x " << curY << ": " << *approximation;
             curY += *step;
@@ -58,9 +56,8 @@ __device__ void traverse(float* startX, float* startY, float endX, float endY, f
 __global__ void Func(float* startX, float* startY, int* appro, float* step, int* maxIter, float* width)
 {
     int i = blockIdx.x*blockDim.x + threadIdx.x;
-    //traverse(startX+i, startY+i, (startX[i] + *width), (startY[i] + *width), step, maxIter, appro + i, width);
-    pointApproximation(startX + i, startY + i, maxIter, appro + i);
-    //*appro = 2137;
+    traverse(startX + i, startY + i, (startX[i] + *width), (startY[i] + *width), step, maxIter, appro + i, width);
+    //pointApproximation(startX + i, startY + i, maxIter, appro + i);
 }
 
 int main()
@@ -96,18 +93,27 @@ int main()
 
     float* realPoints_c, *imagPoints_c;
     int* approximations_c;
+    float* width_c;
+    int* max_c;
+    float* step_c;
 
     cudaMalloc((void**)&realPoints_c, sizeof(float) * numberThreads*numberThreads);
     cudaMalloc((void**)&imagPoints_c, sizeof(float) * numberThreads * numberThreads);
     cudaMalloc((void**)&approximations_c, sizeof(int) * (width / step) * (width / step) * numberThreads * numberThreads);
+    cudaMalloc((void**)&width_c, sizeof(float));
+    cudaMalloc((void**)&max_c, sizeof(int));
+    cudaMalloc((void**)&step_c, sizeof(float));
 
     cudaMemcpy(realPoints_c, realPoints, sizeof(float) * numberThreads*numberThreads, cudaMemcpyHostToDevice);
     cudaMemcpy(imagPoints_c, imagPoints, sizeof(float) * numberThreads * numberThreads, cudaMemcpyHostToDevice);
+    cudaMemcpy(width_c, &width, sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(max_c, &max, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(step_c, &step, sizeof(float), cudaMemcpyHostToDevice);
 
     dim3 threadsPerBlock(4, 4);
     dim3 numBlocks(numberThreads * numberThreads / threadsPerBlock.x, numberThreads * numberThreads / threadsPerBlock.y);
 
-    Func << <numBlocks, threadsPerBlock >> > (realPoints_c, imagPoints_c, approximations_c, &step, &max, &width);
+    Func << <numBlocks, threadsPerBlock >> > (realPoints_c, imagPoints_c, approximations_c, step_c, max_c, width_c);
 
     cudaMemcpy(approximations, approximations_c, sizeof(int) * (width / step) * (width / step) * numberThreads * numberThreads, cudaMemcpyDeviceToHost);
 
