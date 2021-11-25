@@ -3,12 +3,13 @@
 
 #include <iostream>
 #include <math.h>
+#include <iomanip>
 #define AREA_UNSINED_LIMIT 2
 
 using namespace std;
 
 void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* approximation);
-void traverse(float* startX, float* startY, float* endX, float* endY, float* step, int* maxIter, int* approximation);
+void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width);
 float** splitArea(int* threadCount);
 void print_in_human_readable_form(float** table, int x, int y, int n);
 
@@ -24,15 +25,38 @@ int main()
     int appro = 0;
     int threadCount;
 
-    /*cout << "Podaj maksymalna ilosc iteracji: ";
+    cout << "Podaj maksymalna ilosc iteracji: ";
     cin >> max;
 
     cout << "Podaj dokladnosc liczby zmiennoprzecinkowej: ";
     cin >> step;
-    */
-    cout << "Podaj ilosc watkow: ";
-    cin >> threadCount;
+    
+    /*cout << "Podaj ilosc watkow: ";
+    cin >> threadCount;*/
 
+    threadCount = 1;
+
+    float width = 4.0 / threadCount;
+
+    int* approximations = new int[(width / step) * (width / step)];
+
+    float startX = -2;
+    float startY = -2;
+    float endX = 2;
+    float endY = 2;
+    
+    traverse(&startX, &startY, endX, endY, &step, &max, approximations, &width);
+
+    for (int i = 0; i < (width / step); i++)
+    {
+        for (int j = 0; j < (width / step); j++)
+        {
+            cout << setw(2) << approximations[(int)(i * (width / step) + j)] << " ";
+            //void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
+        }
+        cout << endl;
+    }
+    return 0;
     cout << "DEBUG:" << endl;
     
     int Y = 1;
@@ -45,7 +69,6 @@ int main()
         for (int j = 0; j < ((i == count - 1) ? count - 1 : count); j++)
             print_in_human_readable_form(table, i+1, j+1, i * count + j);
    */
-    
 
     for (int i = 0; i < threadCount - 2; i++)
     {
@@ -85,6 +108,7 @@ int main()
     delete[] table[0];
     delete table[1];
     delete[] table;
+    delete[] approximations;
     return 0;
 }
 
@@ -150,18 +174,19 @@ void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* app
     *approximation = i;
 }
 
-void traverse(float* startX, float* startY, float* endX, float* endY, float* step, int* maxIter, int* approximation)
+void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
 {
     int i = 0;
     float curX, curY;
-    curX = *startX;
-    while (curX < *endX) {
-        curY = *startY;
-        while (curY < *endY) {
-            pointApproximation(&curX, &curY, maxIter, approximation);
-            //cout << endl << i++ << ": " << curX << " x " << curY << ": " << *approximation;
-            curY += *step;
+    curY = *startY;
+    while (curY < endY) {
+        int j = 0;
+        curX = *startX;
+        while (curX < endX) {
+            pointApproximation(&curX, &curY, maxIter, approximation + (i * (int)(*width / *step + 0.5)) + j++);
+            curX += *step;
         }
-        curX += *step;
+        curY += *step;
+        i++;
     }
 }
