@@ -4,12 +4,13 @@
 #include <iostream>
 #include <math.h>
 #include <iomanip>
+#include <thread>
 #define AREA_UNSINED_LIMIT 2
 
 using namespace std;
 
 void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* approximation);
-void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width);
+void traverse(float startX, float startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width);
 float** splitArea(int* threadCount);
 void print_in_human_readable_form(float** table, int x, int y, int n);
 
@@ -31,84 +32,66 @@ int main()
     cout << "Podaj dokladnosc liczby zmiennoprzecinkowej: ";
     cin >> step;
     
-    /*cout << "Podaj ilosc watkow: ";
-    cin >> threadCount;*/
+    cout << "Podaj ilosc watkow: ";
+    cin >> threadCount;
 
-    threadCount = 1;
+    //Helpful values
+    float width = 2 * AREA_UNSINED_LIMIT;
+    int size = (int)((width / step) + 0.5);
 
-    float width = 4.0 / threadCount;
+    //Result array
+    int* approximations = new int[(size + 1) * (size + 1)]; //DO NOT TOUCH
 
-    int* approximations = new int[(width / step) * (width / step)];
+    //Complex plane coordinates
+    float startX = -2.0;
+    float startY = 0;
+    float endX = 2.0;
+    float endY = 0;
 
-    float startX = -2;
-    float startY = -2;
-    float endX = 2;
-    float endY = 2;
-    
-    traverse(&startX, &startY, endX, endY, &step, &max, approximations, &width);
+    //Most of the rectangles height: (n-1) rectangles of this height and 1 rectangle of remaining height
+    int most_of_rectangles_height = size / threadCount;
 
-    for (int i = 0; i < (width / step); i++)
+    //Most of the rectangles size ratio
+    float most_of_rectangles_size_ratio = size / (float)most_of_rectangles_height;
+
+    //Thread array
+    thread* threads = new thread[threadCount];
+
+    //Prepare n-1 threads
+    for (int i = 0; i < threadCount - 1; i++)
     {
-        for (int j = 0; j < (width / step); j++)
+        //Prepare correct parameters
+        startY = (float)-AREA_UNSINED_LIMIT + 2 * (float)AREA_UNSINED_LIMIT * i / most_of_rectangles_size_ratio;
+        endY = (float)-AREA_UNSINED_LIMIT + 2 * (float)AREA_UNSINED_LIMIT * (i + 1) / most_of_rectangles_size_ratio;
+
+        //Run thread with correct parameters
+        threads[i] = thread(traverse, startX, startY, endX, endY, &step, &max, approximations + (int)(size * size * i / most_of_rectangles_size_ratio + 0.5), &width);
+    }
+
+    //Prepare last thread
+    //Prepare correct parameters
+    startY = (float)-AREA_UNSINED_LIMIT + 2 * (float)AREA_UNSINED_LIMIT * (threadCount - 1) / most_of_rectangles_size_ratio;
+    endY = 2;
+    //Run last thread with correct parameters
+    threads[threadCount - 1] = thread(traverse, startX, startY, endX, endY, &step, &max, approximations + (int)(size * size * (threadCount - 1) / most_of_rectangles_size_ratio + 0.5), &width);
+    
+    //Join the threads
+    for (int i = 0; i < threadCount; i++) threads[i].join();
+
+    //Display
+    for (int i = 0; i < size; i++)
+    {
+        for (int j = 0; j < size; j++)
         {
-            cout << setw(2) << approximations[(int)(i * (width / step) + j)] << " ";
-            //void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
+            cout << setw(2) << approximations[(int)(i * size + j)];
         }
         cout << endl;
     }
-    return 0;
-    cout << "DEBUG:" << endl;
     
-    int Y = 1;
-    int X = 1;
-    float** table = splitArea(&threadCount);
-    int count = int(table[0][0]);
-    //cout << count << " " << table[0][0] << "\r\n\r\n";
-    /*
-    for (int i = 0; i < count; i++)
-        for (int j = 0; j < ((i == count - 1) ? count - 1 : count); j++)
-            print_in_human_readable_form(table, i+1, j+1, i * count + j);
-   */
-
-    for (int i = 0; i < threadCount - 2; i++)
-    {
-        print_in_human_readable_form(table, X, Y, X + 1);
-        X++;
-        if ((i + 1) % count == 0)
-        {
-            X = 1;
-            
-            Y++;
-        }
-    }
-    if (table[1][0] < 0.5)
-    {
-        print_in_human_readable_form(table, count - 1, count, count);
-        print_in_human_readable_form(table, count, count, count + 1);
-
-    }
-    else
-    {
-        int temp = 0;
-        if (X < count && Y == count) temp = count - 1;
-        else temp = count + 1;
-
-        print_in_human_readable_form(table, X, Y, temp);
-
-        if (Y != count) temp = 1;
-        
-        print_in_human_readable_form(table, temp, count, count + 1);
-    }
-
-    //pointApproximation(&realPoint, &imagPoint, &max, &appro);
-    //cout << appro;
-    //traverse(&realPoint, &imagPoint, new float(1.0), new float(1.0), &step, &max, &appro);
-    //cout << appro;
-    //cin >> max;
-    delete[] table[0];
-    delete table[1];
-    delete[] table;
+    //Cleanup
     delete[] approximations;
+
+    //Exit
     return 0;
 }
 
@@ -174,14 +157,14 @@ void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* app
     *approximation = i;
 }
 
-void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
+void traverse(float startX, float startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
 {
     int i = 0;
     float curX, curY;
-    curY = *startY;
+    curY = startY;
     while (curY < endY) {
         int j = 0;
-        curX = *startX;
+        curX = startX;
         while (curX < endX) {
             pointApproximation(&curX, &curY, maxIter, approximation + (i * (int)(*width / *step + 0.5)) + j++);
             curX += *step;
