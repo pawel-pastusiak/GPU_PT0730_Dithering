@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 
@@ -33,6 +34,7 @@ __device__ void pointApproximation(float* realPart, float* imagPart, int* maxIte
 
 __device__ void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
 {
+    //printf("StartX = %f\tStartY = %f\tEndX = %f\tEndY=%f\tStep=%f\n",*startX,*startY,endX,endY,*step);
     int i = 0;
     float curX, curY;
     curY = *startY;
@@ -48,99 +50,121 @@ __device__ void traverse(float* startX, float* startY, float endX, float endY, f
     }
 }
 
-__global__ void Func(float** startX, float** startY, int** appro, float* step, int* maxIter, float* width, int* numberThreads)
+__global__ void Func(float* startX, float* startY, int* appro, float* step, int* maxIter, float* width, int* numberThreads, int size, float ratio)
 {
-    int i = blockIdx.x * blockDim.x + blockIdx.y * blockDim.y * 8 + threadIdx.x + threadIdx.y * 8;
-    //traverse(startX + i, startY + i, (startX[i] + *width), (startY[i] + *width), step, maxIter, appro + (8*((i/8)*4))+2*(i%8), width);
-    appro[1][1] = 2137;
+    int i = threadIdx.x;
+    //printf("\n%d", size);
+    if (i < *numberThreads - 1)
+        traverse(startX + i, startY + i, 2.0f, startY[i + 1], step, maxIter, appro + (int)(size * size * i / ratio + 0.5), width);
+    else
+        traverse(startX + i, startY + i, 2.0f, 2.0f, step, maxIter, appro + (int)(size * size * i / ratio + 0.5), width);
+    /*for (int j = 0; j < size; j++)
+        appro[i * size + j] = i;*/
+
+    //appro[1][1] = 2137;
     //if (appro[1][1] < 0)
-        printf("%d ",appro[1][1]);
+        //appro[i] = i;
 }
 
 int main()
 {
     int max = 0;
     float step = 0;
+    int numberThreads = 8;
 
     cout << "Prosze podac dokladnosc liczby zmiennoprzecinkowej: ";
     cin >> step;
     cout << "\nProsze podac maksymalna liczbe powtorzen funkcji sprawdzajacej przynaleznosc punktu do zbioru: ";
     cin >> max;
+    cout << "\nProsze podac liczbe watkow: ";
+    cin >> numberThreads;
 
-    int numberThreads = 8;
-    float width = 4.0 / numberThreads;
+   
 
-    //float* realPoints;
-    //realPoints = (float*)malloc(sizeof(float) * numberThreads*numberThreads);
+    float width = 4.0; 
+    int size = (int)((width / step) + 0.5);
 
-    float** realPoints;
-    realPoints = (float**)malloc(sizeof(float*) * numberThreads);
-    for (int i = 0; i < numberThreads; i++)
-    {
-        realPoints[i] = (float*)malloc(sizeof(float) * numberThreads);
-    }
+    if (numberThreads > size)
+        numberThreads = size;   //clamp(0,size)
 
-    float** imagPoints;
-    imagPoints = (float**)malloc(sizeof(float*) * numberThreads);
-    for (int i = 0; i < numberThreads; i++)
-    {
-        imagPoints[i] = (float*)malloc(sizeof(float) * numberThreads);
-    }
+    float* realPoints;
+    realPoints = (float*)malloc(sizeof(float) * numberThreads);
 
-    int** approximations;
-    approximations = (int**)malloc(sizeof(int*) * (width / step) * numberThreads);
-    for (int i = 0; i < (width / step) * numberThreads; i++)
-    {
-        approximations[i] = (int*)malloc(sizeof(int) * (width / step) * numberThreads);
-    }
+    //float** realPoints;
+    //realPoints = (float**)malloc(sizeof(float*) * numberThreads);
+    //for (int i = 0; i < numberThreads; i++)
+    //{
+    //    realPoints[i] = (float*)malloc(sizeof(float) * numberThreads);
+    //}
+
+    //float** imagPoints;
+    //imagPoints = (float**)malloc(sizeof(float*) * numberThreads);
+    //for (int i = 0; i < numberThreads; i++)
+    //{
+    //    imagPoints[i] = (float*)malloc(sizeof(float) * numberThreads);
+    //}
+
+    //int** approximations;
+    //approximations = (int**)malloc(sizeof(int*) * (width / step) * numberThreads);
+    //for (int i = 0; i < (width / step) * numberThreads; i++)
+    //{
+    //    approximations[i] = (int*)malloc(sizeof(int) * (width / step) * numberThreads);
+    //}
 
 
-    //float* imagPoints;
-    //imagPoints = (float*)malloc(sizeof(float) * numberThreads*numberThreads);
+    float* imagPoints;
+    imagPoints = (float*)malloc(sizeof(float) * numberThreads);
 
-    //int* approximations;
-    //approximations = (int*)malloc(sizeof(int) * (width/step)* (width / step)* numberThreads * numberThreads);
+    int* approximations;
+    approximations = (int*)malloc(sizeof(int) * (size + 1) * (size + 1));
 
-    for (int i = 0; i < (width / step) * numberThreads; i++) 
+    /*for (int i = 0; i < (width / step) * numberThreads; i++) 
     {
         for (int j = 0; j < (width / step) * numberThreads; j++)
         {
             approximations[i][j] = -2;
         }
 
-    }
+    }*/
+    //Most of the rectangles height: (n-1) rectangles of this height and 1 rectangle of remaining height
+
+    int most_of_rectangles_height = size / numberThreads;
+
+    //Most of the rectangles size ratio
+    float most_of_rectangles_size_ratio = size / (float)most_of_rectangles_height;
+
 
     for (int i = 0; i < numberThreads; i++)
     {
-        for (int j = 0; j < numberThreads; j++)
-        {
-            realPoints[i][j] = -2.0 + width * i;
-            imagPoints[i][j] = -2.0 + width * j;
-        }
+        realPoints[i] = -2.0;
+        imagPoints[i] = -2.0 + width * i/most_of_rectangles_size_ratio;
     }
 
-    float** realPoints_c, **imagPoints_c;
-    int** approximations_c;
+    float* realPoints_c, *imagPoints_c;
+    int* approximations_c;
     float* width_c;
     int* max_c;
     float* step_c;
     int* numberThreads_c;
 
-    size_t pitchR;
-    cudaMallocPitch((void**)&realPoints_c, &pitchR, numberThreads, numberThreads);
+    cudaMalloc((void**)&realPoints_c, sizeof(float) * numberThreads);
+    cudaMalloc((void**)&imagPoints_c, sizeof(float) * numberThreads);
+    cudaMalloc((void**)&approximations_c, sizeof(int) * (size + 1) * (size + 1));
+    //size_t pitchR;
+    //cudaMallocPitch((void**)&realPoints_c, &pitchR, numberThreads, numberThreads);
     //cudaMalloc((void**)&realPoints_c, sizeof(float*) * numberThreads);
     //for (int i = 0; i < numberThreads; i++)
     //{
     //    cudaMalloc((void**)&realPoints_c[i], sizeof(float) * numberThreads);
     //}
-    size_t pitchI;
-    cudaMallocPitch((void**)&imagPoints_c, &pitchI, numberThreads, numberThreads);
+    //size_t pitchI;
+    //cudaMallocPitch((void**)&imagPoints_c, &pitchI, numberThreads, numberThreads);
     //for (int i = 0; i < numberThreads; i++)
     //{
     //    cudaMalloc((void**)&imagPoints_c[i], sizeof(float) * numberThreads);
     //}
-    size_t pitchA;
-    cudaMallocPitch((void**)&approximations_c, &pitchA, (width / step) * numberThreads, (width / step) * numberThreads);
+    //size_t pitchA;
+    //cudaMallocPitch((void**)&approximations_c, &pitchA, (width / step) * numberThreads, (width / step) * numberThreads);
     //for (int i = 0; i < (width / step) * numberThreads; i++)
     //{
     //    cudaMalloc((void**)&approximations_c[i], sizeof(int) * (width / step) * numberThreads);
@@ -151,21 +175,31 @@ int main()
     cudaMalloc((void**)&step_c, sizeof(float));
     cudaMalloc((void**)&numberThreads_c, sizeof(int));
 
-    cudaMemcpy2D(realPoints_c, pitchR, realPoints, sizeof(float*) * numberThreads, numberThreads, numberThreads, cudaMemcpyHostToDevice);
-    cudaMemcpy2D(imagPoints_c, pitchI, imagPoints, sizeof(float*) * numberThreads, numberThreads, numberThreads, cudaMemcpyHostToDevice);
+    cudaMemcpy(realPoints_c, realPoints, sizeof(float) * numberThreads, cudaMemcpyHostToDevice);
+    cudaMemcpy(imagPoints_c, imagPoints, sizeof(float) * numberThreads, cudaMemcpyHostToDevice);
+    //cudaMemcpy2D(realPoints_c, pitchR, realPoints, sizeof(float*) * numberThreads, numberThreads, numberThreads, cudaMemcpyHostToDevice);
+    //cudaMemcpy2D(imagPoints_c, pitchI, imagPoints, sizeof(float*) * numberThreads, numberThreads, numberThreads, cudaMemcpyHostToDevice);
     cudaMemcpy(width_c, &width, sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(max_c, &max, sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(step_c, &step, sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy2D(approximations_c, pitchA, approximations, sizeof(int*) * (width / step) * numberThreads, (width / step) * numberThreads, (width / step) * numberThreads, cudaMemcpyHostToDevice);
+    //cudaMemcpy2D(approximations_c, pitchA, approximations, sizeof(int*) * (width / step) * numberThreads, (width / step) * numberThreads, (width / step) * numberThreads, cudaMemcpyHostToDevice);
+    cudaMemcpy(approximations_c, approximations, sizeof(int) * (size + 1) * (size + 1), cudaMemcpyHostToDevice);
 
-    dim3 threadsPerBlock(4, 4);
-    dim3 numBlocks(numberThreads / threadsPerBlock.x, numberThreads / threadsPerBlock.y);
+    //dim3 threadsPerBlock(4, 4);
+    //dim3 numBlocks(numberThreads / threadsPerBlock.x, numberThreads / threadsPerBlock.y);
 
-    Func << <numBlocks, threadsPerBlock >> > (realPoints_c, imagPoints_c, approximations_c, step_c, max_c, width_c, numberThreads_c);
+    Func << <1, numberThreads >> > (realPoints_c, imagPoints_c, approximations_c, step_c, max_c, width_c, numberThreads_c, size, most_of_rectangles_size_ratio);
 
-    cudaMemcpy(approximations, approximations_c, sizeof(int*) * (width / step) * numberThreads, cudaMemcpyDeviceToHost);
+    cudaMemcpy(approximations, approximations_c, sizeof(int) * (size + 1) * (size + 1), cudaMemcpyDeviceToHost);
 
-    for (int i = 0; i < (width / step) * numberThreads; i++)
+    for (int i = 0; i < (size); i++) {
+        for (int j = 0; j < size; j++) {
+            cout << setw(2) << approximations[i * size + j];
+        }
+        cout << endl;
+    }
+
+  /*  for (int i = 0; i < (width / step) * numberThreads; i++)
     {
         for (int j = 0; j < (width / step) * numberThreads; j++)
         {
@@ -175,7 +209,7 @@ int main()
                 cout << "  \t";
         }
         cout << endl;
-    }
+    }*/
     return 0;
 }
 
