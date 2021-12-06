@@ -5,6 +5,8 @@
 #include <math.h>
 #include <iomanip>
 #include <thread>
+#include <time.h>
+#include <windows.h>
 #define AREA_UNSINED_LIMIT 2
 
 using namespace std;
@@ -13,6 +15,29 @@ void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* app
 void traverse(float startX, float startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width);
 float** splitArea(int* threadCount);
 void print_in_human_readable_form(float** table, int x, int y, int n);
+
+#pragma region Kod do pomiaru czasu
+double PCFreq = 0.0;
+__int64 CounterStart = 0;
+
+void StartCounter()
+{
+    LARGE_INTEGER li;
+    if (!QueryPerformanceFrequency(&li))
+        cout << "QueryPerformanceFrequency failed!\n";
+
+    PCFreq = double(li.QuadPart) / 1000.0;
+
+    QueryPerformanceCounter(&li);
+    CounterStart = li.QuadPart;
+}
+double GetCounter()
+{
+    LARGE_INTEGER li;
+    QueryPerformanceCounter(&li);
+    return double(li.QuadPart - CounterStart) / PCFreq;
+}
+#pragma endregion
 
 int main()
 {
@@ -34,6 +59,10 @@ int main()
     
     cout << "Podaj ilosc watkow: ";
     cin >> threadCount;
+
+    //Time measurement
+    double ms = 0;
+    StartCounter();
 
     //Helpful values
     float width = 2 * AREA_UNSINED_LIMIT;
@@ -78,15 +107,20 @@ int main()
     //Join the threads
     for (int i = 0; i < threadCount; i++) threads[i].join();
 
+    //Time measurement
+    ms += GetCounter();
+
     //Display
-    for (int i = 0; i < size; i++)
+    /*for (int i = 0; i < size; i++)
     {
         for (int j = 0; j < size; j++)
         {
             cout << setw(2) << approximations[(int)(i * size + j)];
         }
         cout << endl;
-    }
+    }*/
+
+    cout << "\r\n\r\n" << ms << "ms" << "\r\n";
     
     //Cleanup
     delete[] approximations;
