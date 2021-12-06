@@ -1,6 +1,7 @@
 // CPU_Mandelbrot.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
-
+#include <fstream>
+#include <string>
 #include <iostream>
 #include <math.h>
 #include <iomanip>
@@ -122,6 +123,27 @@ int main()
 
     cout << "\r\n\r\n" << ms << "ms" << "\r\n";
     
+    //Because of size of resulting array it is best to save data into file
+    std::fstream file("mandelbrot.pgm", std::fstream::out);
+    file << "P2\n" << size << " " << size << "\n" << max << "\n";
+    std::string line, value;
+
+    line = "";
+    for (int i = 0; i < size * size; i++)
+    {
+        value = to_string(approximations[(int)(i)]);
+        if(line.length() + value.length() > 69)
+        {
+            file << line << "\n";
+            line = "";
+        }
+        line += value + " ";
+    }
+
+    file << line;
+
+    file.close();
+
     //Cleanup
     delete[] approximations;
 
