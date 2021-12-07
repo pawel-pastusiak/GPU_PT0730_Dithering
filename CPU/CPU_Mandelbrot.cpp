@@ -112,37 +112,37 @@ int main()
     ms += GetCounter();
 
     //Display
-    for (int i = 0; i < size; i++)
+    /*for (int i = 0; i < size; i++)
     {
         for (int j = 0; j < size; j++)
         {
             cout << setw(2) << approximations[(int)(i * size + j)];
         }
         cout << endl;
-    }
+    }*/
 
     cout << "\r\n\r\n" << ms << "ms" << "\r\n";
     
     //Because of size of resulting array it is best to save data into file
-    //std::fstream file("mandelbrot.pgm", std::fstream::out);
-    //file << "P2\n" << size << " " << size << "\n" << max << "\n";
-    //std::string line, value;
+    std::fstream file("mandelbrot.pgm", std::fstream::out);
+    file << "P2\n" << size << " " << size << "\n" << max << "\n";
+    std::string line, value;
 
-    //line = "";
-    //for (int i = 0; i < size * size; i++)
-    //{
-    //    value = to_string(approximations[(int)(i)]);
-    //    if(line.length() + value.length() > 69)
-    //    {
-    //        file << line << "\n";
-    //        line = "";
-    //    }
-    //    line += value + " ";
-    //}
+    line = "";
+    for (int i = 0; i < size * size; i++)
+    {
+        value = to_string(approximations[(int)(i)]);
+        if(line.length() + value.length() > 69)
+        {
+            file << line << "\n";
+            line = "";
+        }
+        line += value + " ";
+    }
 
-    //file << line;
+    file << line;
 
-    //file.close();
+    file.close();
 
     //Cleanup
     delete[] approximations;
