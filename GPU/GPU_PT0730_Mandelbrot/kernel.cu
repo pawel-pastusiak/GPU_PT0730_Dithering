@@ -2,6 +2,8 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
+#include <fstream>
+#include <string>
 #include <stdio.h>
 #include <iostream>
 #include <iomanip>
@@ -88,7 +90,7 @@ int main()
 {
     int max = 0;
     float step = 0;
-    int numberThreads = 8;
+    int numberThreads = 0;
 
     cout << "Prosze podac dokladnosc liczby zmiennoprzecinkowej: ";
     cin >> step;
@@ -118,7 +120,7 @@ int main()
     double ms = 0;
     StartCounter();
 
-    float width = 4.0; 
+    float width = 4.0;
     int size = (int)((width / step) + 0.5);
 
     if (numberThreads > size)
@@ -142,10 +144,10 @@ int main()
     for (int i = 0; i < numberThreads; i++)
     {
         realPoints[i] = -2.0;
-        imagPoints[i] = -2.0 + width * i/most_of_rectangles_size_ratio;
+        imagPoints[i] = -2.0 + width * i / most_of_rectangles_size_ratio;
     }
 
-    float* realPoints_c, *imagPoints_c;
+    float* realPoints_c, * imagPoints_c;
     int* approximations_c;
     float* width_c;
     int* max_c;
@@ -173,6 +175,7 @@ int main()
     ms += GetCounter();
 
     cudaMemcpy(approximations, approximations_c, sizeof(int) * (size + 1) * (size + 1), cudaMemcpyDeviceToHost);
+    
 
     //for (int i = 0; i < (size); i++) {
     //    for (int j = 0; j < size; j++) {
@@ -182,6 +185,28 @@ int main()
     //}
 
     cout << "\r\n\r\n" << ms << "ms" << "\r\n";
+
+    std::fstream file("mandelbrot.pgm", std::fstream::out);
+    file << "P2\n" << size << " " << size << "\n" << max << "\n";
+    std::string line, value;
+
+    line = "";
+    for (int i = 0; i < size * size; i++)
+    {
+        value = to_string(approximations[(int)(i)]);
+        if (line.length() + value.length() > 69)
+        {
+            file << line << "\n";
+            line = "";
+        }
+        line += value + " ";
+    }
+
+    file << line;
+
+    file.close();
+
+
 
     return 0;
 }
