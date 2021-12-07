@@ -36,7 +36,7 @@ double GetCounter()
 
 
 
-__device__ void pointApproximation(float* realPart, float* imagPart, int* maxIter, int* approximation)
+__device__ void pointApproximationCount(float* realPart, float* imagPart, int* maxIter, int* approximation)
 {
     *approximation = 0;
     int i = 0;
@@ -58,7 +58,36 @@ __device__ void pointApproximation(float* realPart, float* imagPart, int* maxIte
     }
 
     *approximation = i;
+    printf("%d", *approximation);
 }
+
+__device__ void traverseCount(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
+{
+    int i = 0;
+    float curX, curY;
+    curY = *startY;
+    while (curY < endY) {
+        int j = 0;
+        curX = *startX;
+        while (curX < endX) {
+            pointApproximation(&curX, &curY, maxIter, approximation); //+ (i * (int)(*width / *step + 0.5)) + j++);
+            curX += *step;
+            j++;
+        }
+        curY += *step;
+        i++;
+    }
+}
+
+__global__ void FuncCount(float* startX, float* startY, int* appro, float* step, int* maxIter, float* width, int* numberThreads, int size, float ratio)
+{
+    int i = threadIdx.x;
+    if (i < *numberThreads - 1)
+        traverse(startX + i, startY + i, 2.0f, startY[i + 1], step, maxIter, appro, width);
+    else
+        traverse(startX + i, startY + i, 2.0f, 2.0f, step, maxIter, appro, width);
+}
+
 
 __device__ void traverse(float* startX, float* startY, float endX, float endY, float* step, int* maxIter, int* approximation, float* width)
 {
@@ -132,8 +161,7 @@ int main()
     float* imagPoints;
     imagPoints = (float*)malloc(sizeof(float) * numberThreads);
 
-    int* approximations;
-    approximations = (int*)malloc(sizeof(int) * (size + 1) * (size + 1));
+
 
     int most_of_rectangles_height = size / numberThreads;
 
@@ -156,7 +184,7 @@ int main()
 
     cudaMalloc((void**)&realPoints_c, sizeof(float) * numberThreads);
     cudaMalloc((void**)&imagPoints_c, sizeof(float) * numberThreads);
-    cudaMalloc((void**)&approximations_c, sizeof(int) * (size + 1) * (size + 1));
+
 
     cudaMalloc((void**)&width_c, sizeof(float));
     cudaMalloc((void**)&max_c, sizeof(int));
@@ -168,45 +196,65 @@ int main()
     cudaMemcpy(width_c, &width, sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(max_c, &max, sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(step_c, &step, sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(approximations_c, approximations, sizeof(int) * (size + 1) * (size + 1), cudaMemcpyHostToDevice);
 
-    Func << <1, numberThreads >> > (realPoints_c, imagPoints_c, approximations_c, step_c, max_c, width_c, numberThreads_c, size, most_of_rectangles_size_ratio);
+    int* approximations;
+    if (size <= 0)
+    {
+        approximations = (int*)malloc(sizeof(int) * (size + 1) * (size + 1));
+        cudaMalloc((void**)&approximations_c, sizeof(int) * (size + 1) * (size + 1));
+        cudaMemcpy(approximations_c, approximations, sizeof(int) * (size + 1) * (size + 1), cudaMemcpyHostToDevice);
+
+        Func << <1, numberThreads >> > (realPoints_c, imagPoints_c, approximations_c, step_c, max_c, width_c, numberThreads_c, size, most_of_rectangles_size_ratio);
+    }
+    else
+    {
+        approximations = (int*)malloc(sizeof(int));
+        cudaMalloc((void**)&approximations_c_c, sizeof(int));
+        cudaMemcpy(approximations_c, &approximations, sizeof(int), cudaMemcpyHostToDevice);
+
+        FuncCount <<<1,numberThreads>>>(realPoints_c, imagPoints_c, approximations_c, step_c, max_c, width_c, numberThreads_c, size, most_of_rectangles_size_ratio)
+    }
+
+
 
     ms += GetCounter();
 
-    cudaMemcpy(approximations, approximations_c, sizeof(int) * (size + 1) * (size + 1), cudaMemcpyDeviceToHost);
-    
-
-    //for (int i = 0; i < (size); i++) {
-    //    for (int j = 0; j < size; j++) {
-    //        cout << setw(2) << approximations[i * size + j];
-    //    }
-    //    cout << endl;
-    //}
-
-    cout << "\r\n\r\n" << ms << "ms" << "\r\n";
-
-    std::fstream file("mandelbrot.pgm", std::fstream::out);
-    file << "P2\n" << size << " " << size << "\n" << max << "\n";
-    std::string line, value;
-
-    line = "";
-    for (int i = 0; i < size * size; i++)
+    if (size <= 0)
     {
-        value = to_string(approximations[(int)(i)]);
-        if (line.length() + value.length() > 69)
-        {
-            file << line << "\n";
-            line = "";
+        cudaMemcpy(approximations, approximations_c, sizeof(int) * (size + 1) * (size + 1), cudaMemcpyDeviceToHost);
+
+
+        for (int i = 0; i < (size); i++) {
+            for (int j = 0; j < size; j++) {
+                cout << setw(2) << approximations[i * size + j];
+            }
+            cout << endl;
         }
-        line += value + " ";
+
+        cout << "\r\n\r\n" << ms << "ms" << "\r\n";
+
+        //std::fstream file("mandelbrot.pgm", std::fstream::out);
+        //file << "P2\n" << size << " " << size << "\n" << max << "\n";
+        //std::string line, value;
+
+        //line = "";
+        //for (int i = 0; i < size * size; i++)
+        //{
+        //    value = to_string(approximations[(int)(i)]);
+        //    if (line.length() + value.length() > 69)
+        //    {
+        //        file << line << "\n";
+        //        line = "";
+        //    }
+        //    line += value + " ";
+        //}
+
+        //file << line;
+
+        //file.close();
     }
-
-    file << line;
-
-    file.close();
-
-
+    else
+        cout << "\r\n\r\n" << ms << "ms" << "\r\n";
 
     return 0;
 }
