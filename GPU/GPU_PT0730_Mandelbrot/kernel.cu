@@ -195,6 +195,12 @@ int main()
     file.close();
 
 
+    free(approximations);
+    cudaFree(approximations_c);
+    cudaFree(width_c);
+    cudaFree(max_c);
+    cudaFree(step_c);
+    cudaFree(numberThreads_c);
 
     return 0;
 }
